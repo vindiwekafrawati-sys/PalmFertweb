@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PalmFert - Aplikasi Pemupukan Kelapa Sawit (PT. Sawit Makmur Lestari)</title>
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <meta name="theme-color" content="#14532d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            palm: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+              950: '#052e16',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SheetJS (XLSX) for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col justify-between">
+
+  <!-- TOPBAR HEADER (Hidden on Cover Page, Shown on Portal and Module Pages) -->
+  <header id="main-app-header" class="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand & Back Button -->
+      <div class="flex items-center gap-3">
+        <!-- Back to Home Button (Visible when inside a role workspace) -->
+        <button id="navbar-back-home-btn" class="py-1.5 px-3 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition hidden">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-emerald-400"></i>
+          <span>Menu Utama</span>
+        </button>
+
+        <div class="flex items-center gap-2.5 cursor-pointer" onclick="app.navigateTo('home')">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-400 flex items-center justify-center shadow-md">
+            <i data-lucide="sprout" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                PalmFert <span class="text-emerald-400 text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-800">Estate v2.0</span>
+              </h1>
+            </div>
+            <p class="text-[10px] text-slate-400 hidden sm:block">PT. Sawit Makmur Lestari • Divisi Agronomi</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active User Profile Pill & Quick Controls -->
+      <div class="flex items-center flex-wrap gap-2">
+        
+        <!-- Active Logged In User Pill with Photo Avatar -->
+        <div id="navbar-user-pill" class="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1 text-xs hidden">
+          <!-- Populated dynamically by app.js -->
+        </div>
+
+        <!-- Quick Switcher Dropdown -->
+        <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1 text-xs">
+          <span class="text-slate-400 text-[11px] hidden lg:inline">Akses:</span>
+          <select id="navbar-quick-role-select" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+            <option value="home" class="bg-slate-900 text-white">🏠 Menu Utama (ID Portal)</option>
+            <option value="mandor" class="bg-slate-900 text-white">👷 1. Mandor Lapangan</option>
+            <option value="gudang" class="bg-slate-900 text-white">📦 2. Gudang Pupuk</option>
+            <option value="asisten" class="bg-slate-900 text-white">🔍 3. Asisten Afdeling</option>
+            <option value="manager" class="bg-slate-900 text-white">📊 4. Manajer Kebun / Admin</option>
+          </select>
+        </div>
+
+        <!-- Online/Offline Badge -->
+        <div id="offline-status-pill" class="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[11px] font-bold bg-emerald-500 text-white shadow-sm">
+          <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">ONLINE</span>
+        </div>
+
+        <!-- Sync Button -->
+        <button id="btn-sync-all" title="Sinkronkan data offline ke server" class="py-1 px-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition flex items-center gap-1.5 opacity-60">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Sync</span>
+          <span id="badge-pending-sync" class="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full hidden">0</span>
+        </button>
+
+        <!-- Toggle Offline Simulator -->
+        <button id="btn-toggle-offline" title="Simulasi sinyal blank spot di kebun" class="p-1.5 sm:px-2.5 sm:py-1 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1">
+          <i data-lucide="wifi-off" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="hidden xl:inline">Tes Offline</span>
+        </button>
+
+        <!-- High Contrast Sunlight Toggle -->
+        <button id="btn-toggle-contrast" title="Mode Terik Matahari Outdoor" class="p-1.5 sm:px-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition flex items-center gap-1">
+          <i data-lucide="sun" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Reset Demo Data -->
+        <button id="btn-reset-demo-data" title="Reset ke Data Awal" class="p-1.5 sm:px-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 border border-slate-700 transition flex items-center gap-1">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- VIEW COVER: HALAMAN SAMPUL RESMI PERUSAHAAN (OFFICIAL COVER PAGE)          -->
+  <!-- ========================================================================= -->
+  <section id="view-cover" class="app-view-container cover-hero-gradient min-h-screen flex flex-col justify-between text-white p-6 sm:p-12 relative">
+    <div class="cover-glow-effect"></div>
+
+    <!-- Top Cover Branding -->
+    <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-4 z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 to-green-500 flex items-center justify-center shadow-lg">
+          <i data-lucide="sprout" class="w-7 h-7 text-emerald-950 font-black"></i>
+        </div>
+        <div>
+          <span class="text-xs font-black uppercase tracking-widest text-emerald-300 block">PT. SAWIT MAKMUR LESTARI</span>
+          <span class="text-[11px] text-emerald-100/80">Kebun Riau Mandiri • Divisi Agronomi</span>
+        </div>
+      </div>
+
+      <div id="cover-live-clock" class="bg-black/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-emerald-500/20 text-xs flex items-center"></div>
+    </div>
+
+    <!-- Center Cover Content -->
+    <div class="max-w-4xl mx-auto w-full text-center space-y-6 z-10 py-10">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-wider shadow-inner">
+        <i data-lucide="shield-check" class="w-4 h-4"></i>
+        <span>SISTEM APLIKASI RESMI PERKEBUNAN KELAPA SAWIT</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+        PalmFert <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-amber-300">Estate</span>
+      </h1>
+
+      <p class="text-base sm:text-lg text-emerald-100/90 max-w-2xl mx-auto font-medium leading-relaxed">
+        Platform digitalisasi pemupukan sawit terintegrasi: Pencatatan mandor presisi di blok (*offline-first*), kontrol stok pupuk gudang, verifikasi foto watermark GPS, dan pengawasan GIS manajerial.
+      </p>
+
+      <!-- Main Enter Button -->
+      <div class="pt-4">
+        <button onclick="app.navigateTo('home')" class="px-8 py-4 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black text-base rounded-2xl shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 mx-auto">
+          <span>MASUK KE PORTAL APLIKASI</span>
+          <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Features summary pills -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-6 text-xs text-emerald-200">
+        <div class="bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/5">
+          <i data-lucide="wifi-off" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+          <strong>Offline-First Mandor</strong>
+        </div>
+        <div class="bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/5">
+          <i data-lucide="map-pin" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+          <strong>GPS & Timestamp Stamping</strong>
+        </div>
+        <div class="bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/5">
+          <i data-lucide="warehouse" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+          <strong>Kartu Stok Real-time</strong>
+        </div>
+        <div class="bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/5">
+          <i data-lucide="map" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+          <strong>Peta Digital GIS Blok</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Cover Footer -->
+    <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-300/70 border-t border-emerald-800/40 pt-4 z-10">
+      <span>© 2026 PT. Sawit Makmur Lestari. All rights reserved.</span>
+      <span class="font-mono">PalmFert System Version 2.0 Enterprise</span>
+    </div>
+  </section>
+
+  <!-- MAIN CONTAINER (For Portal & Role Workspaces) -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 0: HALAMAN MENU AWAL / PORTAL IDENTITAS PERUSAHAAN                   -->
+    <!-- ========================================================================= -->
+    <section id="view-home" class="app-view-container hidden space-y-7">
+      
+      <!-- WELCOME HERO BANNER (PEMBUKAAN ELEGAN) -->
+      <div class="bg-gradient-to-r from-emerald-950 via-green-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-emerald-800/60">
+        <div class="relative z-10 max-w-3xl space-y-3">
+          
+          <!-- Top Tag & Real-time Clock -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-wider">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              <span>PT. Sawit Makmur Lestari • Kebun Riau Mandiri</span>
+            </div>
+
+            <div id="portal-live-clock" class="bg-black/30 backdrop-blur-sm px-3 py-1 rounded-xl border border-white/10 flex items-center"></div>
+          </div>
+
+          <!-- Dynamic Greeting & App Name -->
+          <div>
+            <h3 id="portal-live-greeting" class="text-amber-400 font-bold text-base sm:text-lg">
+              Selamat Datang di PalmFert
+            </h3>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 leading-tight">
+              Portal Akses Operasional Pemupukan Kelapa Sawit
+            </h2>
+          </div>
+
+          <p class="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+            Sistem saat ini berada dalam <strong class="text-amber-300">Mode Akses Publik Terbuka (Bebas Akses Tanpa Tanda Pengenal / Login)</strong>. Anda dan siapa saja dapat langsung membuka serta mencoba seluruh fitur operasional di bawah ini secara penuh.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-emerald-200 pt-1">
+            <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i> Tapung Hilir, Kampar, Riau</span>
+            <span>•</span>
+            <span class="flex items-center gap-1.5"><i data-lucide="trees" class="w-4 h-4 text-emerald-400"></i> 2,450.5 Hektar (34 Blok)</span>
+          </div>
+        </div>
+
+        <!-- Decorative background graphics -->
+        <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none translate-x-8 translate-y-8">
+          <i data-lucide="sprout" class="w-96 h-96 text-white"></i>
+        </div>
+      </div>
+
+      <!-- EMPLOYEE ID CARDS PORTAL (MENU PENGGUNA TERBUKA) -->
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="unlock" class="w-5 h-5 text-emerald-600"></i>
+              Akses Langsung Fitur & Modul Aplikasi (Bebas Akses)
+            </h3>
+            <p class="text-xs text-slate-500">Pilih modul/jabatan di bawah ini untuk langsung mencoba aplikasinya secara penuh:</p>
+          </div>
+          <span class="text-xs text-emerald-800 font-bold bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 flex items-center gap-1">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i> Akses Bebas Terbuka
+          </span>
+        </div>
+
+        <!-- Sleek 4 Pass Cards Grid (No bulky avatar inside card) -->
+        <div id="portal-id-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Quick Estate KPI Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Laporan Mandor</span>
+          <strong id="home-stat-mandor" class="text-sm font-black text-slate-900 block mt-0.5">-</strong>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gudang & Stok</span>
+          <strong id="home-stat-gudang" class="text-sm font-black text-blue-900 block mt-0.5">-</strong>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Approval Asisten</span>
+          <strong id="home-stat-asisten" class="text-sm font-black text-amber-900 block mt-0.5">-</strong>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Capaian Kebun</span>
+          <strong id="home-stat-manager" class="text-sm font-black text-purple-900 block mt-0.5">-</strong>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: MANDOR LAPANGAN (MOBILE WORKSPACE)                                -->
+    <!-- ========================================================================= -->
+    <section id="view-mandor" class="app-view-container hidden space-y-4">
+      
+      <!-- Top Workspace Header WITH EMPLOYEE AVATAR & CREDENTIALS -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <button onclick="app.navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Menu Utama</span>
+          </button>
+          
+          <!-- Employee Photo Avatar & Full Credentials -->
+          <div class="flex items-center gap-3">
+            <div id="mandor-header-avatar" class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-700 text-white flex items-center justify-center text-lg font-black shadow-md border-2 border-white">
+              B
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="mandor-header-name" class="text-base font-black text-slate-900 leading-tight">Budi Santoso</h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">Mandor Lapangan</span>
+              </div>
+              <p id="mandor-header-nik" class="text-xs text-slate-500 font-mono mt-0.5">NIK-2026-MDR-01 • Afdeling OA (Utara)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="app.showIdCardModal('USR-01')" class="text-xs font-bold text-slate-700 hover:text-slate-900 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5">
+            <i data-lucide="id-card" class="w-4 h-4 text-emerald-600"></i>
+            <span>Lihat ID Card</span>
+          </button>
+          <button id="btn-toggle-mobile-frame" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-1.5">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+            <span>Simulasi HP</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mandor Container Frame -->
+      <div id="mandor-view-container" class="max-w-3xl mx-auto space-y-4">
+        
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex overflow-hidden">
+          <button id="mandor-tab-btn-input" class="flex-1 py-2.5 px-3 text-xs font-extrabold text-emerald-800 border-b-2 border-emerald-600 bg-white flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="edit-3" class="w-4 h-4 text-emerald-600"></i>
+            <span>1. Form Input Pemupukan</span>
+          </button>
+          <button id="mandor-tab-btn-handoff" class="flex-1 py-2.5 px-3 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="arrow-left-right" class="w-4 h-4 text-blue-600"></i>
+            <span>2. Serah Terima Pupuk</span>
+          </button>
+          <button id="mandor-tab-btn-history" class="flex-1 py-2.5 px-3 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="history" class="w-4 h-4 text-amber-600"></i>
+            <span>3. Riwayat Saya</span>
+          </button>
+        </div>
+
+        <!-- Pane 1: Main Realization Input Form -->
+        <div id="mandor-pane-input" class="space-y-4">
+          <div id="mandor-form-container"></div>
+        </div>
+
+        <!-- Pane 2: Serah Terima Pupuk -->
+        <div id="mandor-pane-handoff" class="hidden space-y-4">
+          <div id="mandor-handoff-container"></div>
+        </div>
+
+        <!-- Pane 3: Riwayat Input Mandor -->
+        <div id="mandor-pane-history" class="hidden space-y-4">
+          <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="list-checks" class="w-4 h-4 text-emerald-600"></i> Riwayat Laporan Terkirim & Status Approval
+              </span>
+            </div>
+            <div id="mandor-history-container"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: GUDANG PUPUK (LOGISTIK & STOK)                                    -->
+    <!-- ========================================================================= -->
+    <section id="view-gudang" class="app-view-container hidden space-y-6">
+      
+      <!-- Top Workspace Header WITH EMPLOYEE AVATAR & CREDENTIALS -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <button onclick="app.navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Menu Utama</span>
+          </button>
+          
+          <!-- Employee Photo Avatar & Full Credentials -->
+          <div class="flex items-center gap-3">
+            <div id="gudang-header-avatar" class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center text-lg font-black shadow-md border-2 border-white">
+              J
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="gudang-header-name" class="text-base font-black text-slate-900 leading-tight">Joko Prabowo</h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800">Kerani Gudang</span>
+              </div>
+              <p id="gudang-header-nik" class="text-xs text-slate-500 font-mono mt-0.5">NIK-2026-KRN-04 • Gudang Sentral Kebun</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button onclick="app.showIdCardModal('USR-04')" class="text-xs font-bold text-slate-700 hover:text-slate-900 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5">
+            <i data-lucide="id-card" class="w-4 h-4 text-blue-600"></i>
+            <span>Lihat ID Card</span>
+          </button>
+          <button onclick="warehouseModule.quickIssueFertilizer('FERT-NPK')" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>+ Buat DO Pengeluaran</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real-time Stock Cards Grid -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600">Kartu Stok Fisik & Buffer Minimum:</h3>
+        <div id="gudang-stock-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
+      </div>
+
+      <!-- Forms Section (DO Issue, Retur, Stock In) -->
+      <div id="gudang-forms-container"></div>
+
+      <!-- Mutasi Transaksi Log Table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i> Buku Mutasi Transaksi Pupuk Gudang
+          </h3>
+          <span class="text-xs text-slate-500 font-mono">Ledger Log</span>
+        </div>
+        <div id="gudang-movements-table"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 3: ASISTEN AFDELING (APPROVAL & VERIFIKASI)                          -->
+    <!-- ========================================================================= -->
+    <section id="view-asisten" class="app-view-container hidden space-y-6">
+      
+      <!-- Top Workspace Header WITH EMPLOYEE AVATAR & CREDENTIALS -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <button onclick="app.navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Menu Utama</span>
+          </button>
+          
+          <!-- Employee Photo Avatar & Full Credentials -->
+          <div class="flex items-center gap-3">
+            <div id="asisten-header-avatar" class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-700 text-white flex items-center justify-center text-lg font-black shadow-md border-2 border-white">
+              H
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="asisten-header-name" class="text-base font-black text-slate-900 leading-tight">Ir. Hendra Wijaya</h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800">Asisten Afdeling</span>
+              </div>
+              <p id="asisten-header-nik" class="text-xs text-slate-500 font-mono mt-0.5">NIK-2026-AST-05 • Afdeling OA (Utara)</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Filter Tabs & ID Button -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="app.showIdCardModal('USR-05')" class="text-xs font-bold text-slate-700 hover:text-slate-900 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5">
+            <i data-lucide="id-card" class="w-4 h-4 text-amber-600"></i>
+            <span>Lihat ID Card</span>
+          </button>
+
+          <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <button onclick="approvalModule.setFilter('all')" class="py-1.5 px-3 rounded-lg text-slate-700 hover:text-slate-900">Semua</button>
+            <button onclick="approvalModule.setFilter('pending')" class="py-1.5 px-3 rounded-lg bg-amber-500 text-white shadow">Menunggu Review</button>
+            <button onclick="approvalModule.setFilter('approved')" class="py-1.5 px-3 rounded-lg text-slate-700 hover:text-slate-900">Disetujui</button>
+            <button onclick="approvalModule.setFilter('rejected')" class="py-1.5 px-3 rounded-lg text-slate-700 hover:text-slate-900">Ditolak</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Realizations List for Approval -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <i data-lucide="inbox" class="w-4 h-4 text-amber-600"></i> Laporan Realisasi Pemupukan Masuk
+          </h3>
+          <span class="text-xs text-slate-500">Klik "Periksa" untuk verifikasi dosis & foto GPS</span>
+        </div>
+        <div id="approval-list-container"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 4: MANAJER KEBUN / ADMIN (ANALYTICS, GIS MAP, MASTER DATA, EXPORT)   -->
+    <!-- ========================================================================= -->
+    <section id="view-manager" class="app-view-container hidden space-y-6">
+      
+      <!-- Top Workspace Header WITH EMPLOYEE AVATAR & CREDENTIALS -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button onclick="app.navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Menu Utama</span>
+          </button>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button data-target="pane-analytics" class="manager-subnav-btn py-2 px-3 rounded-xl text-xs font-extrabold bg-emerald-600 text-white shadow transition flex items-center gap-1.5">
+              <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+              <span>1. Analitik & KPI</span>
+            </button>
+
+            <button data-target="pane-gis-map" class="manager-subnav-btn py-2 px-3 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+              <i data-lucide="map" class="w-4 h-4"></i>
+              <span>2. Peta GIS Blok</span>
+            </button>
+
+            <button data-target="pane-master-data" class="manager-subnav-btn py-2 px-3 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+              <i data-lucide="database" class="w-4 h-4"></i>
+              <span>3. Master Data</span>
+            </button>
+
+            <button data-target="pane-reports" class="manager-subnav-btn py-2 px-3 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              <span>4. Laporan & Export</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="app.showIdCardModal('USR-07')" class="text-xs font-bold text-slate-700 hover:text-slate-900 py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5">
+            <i data-lucide="id-card" class="w-4 h-4 text-purple-600"></i>
+            <span>ID Manager</span>
+          </button>
+          <button onclick="exportModule.exportToPDF()" class="py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Cetak PDF</span>
+          </button>
+          <button onclick="exportModule.exportToExcel()" class="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANE 1: ANALYTICS & KPIS -->
+      <div id="pane-analytics" class="manager-sub-pane space-y-6">
+        
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <span>Capaian Luas Terpupuk</span>
+              <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>
+            </div>
+            <div id="kpi-ha-fertilized" class="text-2xl font-black text-emerald-800">1,450 Ha (59.2%)</div>
+            <span id="kpi-ha-target" class="text-xs text-slate-500 block">Target 2,450.5 Ha</span>
+          </div>
+
+          <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <span>Total Pupuk Terpakai</span>
+              <i data-lucide="package" class="w-4 h-4 text-blue-600"></i>
+            </div>
+            <div id="kpi-ton-fertilizer" class="text-2xl font-black text-slate-900">420.5 Ton</div>
+            <span class="text-xs text-slate-500 block">Semester berjalan</span>
+          </div>
+
+          <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <span>Output Tenaga Kerja</span>
+              <i data-lucide="users" class="w-4 h-4 text-amber-600"></i>
+            </div>
+            <div id="kpi-labor-productivity" class="text-2xl font-black text-slate-900">110 Pkk/HK</div>
+            <span class="text-xs text-slate-500 block">Rata-rata produktivitas</span>
+          </div>
+
+          <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <span>Stok Gudang Kritis</span>
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+            </div>
+            <div id="kpi-critical-stock" class="text-2xl font-black text-rose-600">1 Jenis Pupuk</div>
+            <span class="text-xs text-slate-500 block">Di bawah buffer minimum</span>
+          </div>
+        </div>
+
+        <!-- Visual Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="bar-chart" class="w-4 h-4 text-emerald-600"></i>
+                Progres Capaian Pemupukan per Afdeling (Ha)
+              </h3>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chart-afdeling-progress"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>
+                Proporsi Jenis Pupuk
+              </h3>
+            </div>
+            <div class="h-64 relative flex items-center justify-center">
+              <canvas id="chart-fertilizer-breakdown"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend Line Chart -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+              Tren Realisasi Harian (Pohon Dipupuk)
+            </h3>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="chart-daily-trend"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PANE 2: GIS DIGITAL ESTATE BLOCK MAP -->
+      <div id="pane-gis-map" class="manager-sub-pane hidden space-y-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="map-pin" class="w-5 h-5 text-emerald-600"></i>
+                Peta Digital GIS Blok Perkebunan Sawit
+              </h3>
+              <p class="text-xs text-slate-500">Visualisasi status pemupukan per blok afdeling secara interaktif.</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="gis-filter-afdeling" class="text-xs font-semibold rounded-xl border-slate-300 p-2">
+                <option value="all">Semua Afdeling</option>
+                <option value="OA">Afdeling OA (Utara)</option>
+                <option value="OB">Afdeling OB (Tengah)</option>
+                <option value="OC">Afdeling OC (Selatan)</option>
+              </select>
+
+              <select id="gis-filter-status" class="text-xs font-semibold rounded-xl border-slate-300 p-2">
+                <option value="all">Semua Status</option>
+                <option value="completed">🟢 Selesai 100%</option>
+                <option value="in_progress">🟡 Sedang Berjalan</option>
+                <option value="planned">⚪ Belum Mulai</option>
+                <option value="warning">🔴 Butuh Investigasi</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Color Legend -->
+          <div class="flex flex-wrap items-center gap-4 text-xs font-bold p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <span class="text-slate-500 uppercase tracking-wider text-[10px]">Legenda:</span>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-emerald-600"></span> <span>Selesai 100%</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-amber-500 animate-pulse"></span> <span>Sedang Berjalan</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-slate-200 border border-slate-300"></span> <span>Belum Mulai</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-rose-600"></span> <span>Perlu Perhatian</span></div>
+          </div>
+
+          <!-- Map Blocks Grid Container -->
+          <div id="gis-map-canvas-container" class="pt-2"></div>
+        </div>
+      </div>
+
+      <!-- PANE 3: MASTER DATA MANAGEMENT -->
+      <div id="pane-master-data" class="manager-sub-pane hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- Master Tabs Nav -->
+          <div id="master-tabs-nav" class="flex border-b border-slate-200 bg-slate-50"></div>
+          <div id="master-tab-content" class="p-5"></div>
+        </div>
+      </div>
+
+      <!-- PANE 4: REPORTS & EXPORT -->
+      <div id="pane-reports" class="manager-sub-pane hidden space-y-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="file-check" class="w-5 h-5 text-emerald-600"></i>
+                Rekapitulasi Laporan Pemupukan Kebun
+              </h3>
+              <p class="text-xs text-slate-500">Data lengkap realisasi, variansi dosis, mandor, dan status approval untuk audit.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="exportModule.exportToPDF()" class="py-2 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Cetak PDF Resmi</span>
+              </button>
+              <button onclick="exportModule.exportToExcel()" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>Download Excel</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="reports-table-container"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS                                                                    -->
+  <!-- ========================================================================= -->
+
+  <!-- Modal 0: Digital Employee ID Card Popup Modal -->
+  <div id="modal-id-card" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 relative animate-scaleUp">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
+          <i data-lucide="id-card" class="w-5 h-5 text-emerald-600"></i>
+          Kartu Tanda Pengenal Perusahaan Digital
+        </h3>
+        <button onclick="app.closeIdCardModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="modal-id-card-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal 1: Assistant Review & Approval Modal -->
+  <div id="modal-approval-review" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 relative animate-scaleUp">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
+          Verifikasi Laporan Mandor & Bukti GPS
+        </h3>
+        <button onclick="approvalModule.closeReviewModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="modal-approval-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal 2: GIS Block Details Modal -->
+  <div id="modal-block-details" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 relative">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+          <i data-lucide="map" class="w-5 h-5 text-emerald-600"></i>
+          Informasi Lengkap Blok Kebun
+        </h3>
+        <button onclick="gisMapModule.closeBlockModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="modal-block-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Add Block Modal -->
+  <div id="modal-add-block" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 relative">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-black text-base text-slate-900">Tambah Blok Baru</h3>
+        <button onclick="masterDataModule.closeAddBlockModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="form-add-block" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Afdeling</label>
+            <select id="new-block-afdeling" class="w-full rounded-xl border-slate-300 p-2.5">
+              <option value="OA">Afdeling OA</option>
+              <option value="OB">Afdeling OB</option>
+              <option value="OC">Afdeling OC</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Kode Blok (e.g. A15)</label>
+            <input type="text" id="new-block-code" class="w-full rounded-xl border-slate-300 p-2.5 font-bold uppercase" required placeholder="A15">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Luas (Hektar)</label>
+            <input type="number" id="new-block-area" step="0.5" value="30.0" class="w-full rounded-xl border-slate-300 p-2.5 font-bold" required>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">SPH (Pkk/Ha)</label>
+            <input type="number" id="new-block-sph" value="140" class="w-full rounded-xl border-slate-300 p-2.5 font-bold" required>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Tahun Tanam</label>
+            <input type="number" id="new-block-year" value="2019" class="w-full rounded-xl border-slate-300 p-2.5">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Topografi</label>
+            <select id="new-block-topo" class="w-full rounded-xl border-slate-300 p-2.5">
+              <option value="Datar">Datar</option>
+              <option value="Gelombang">Gelombang</option>
+              <option value="Berbukit">Berbukit</option>
+            </select>
+          </div>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="masterDataModule.closeAddBlockModal()" class="py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Batal</button>
+          <button type="submit" class="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Simpan Blok</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Add Fertilizer Modal -->
+  <div id="modal-add-fert" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 relative">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-black text-base text-slate-900">Tambah Jenis Pupuk Baru</h3>
+        <button onclick="masterDataModule.closeAddFertilizerModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="form-add-fert" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1">Nama Pupuk Lengkap</label>
+          <input type="text" id="new-fert-name" class="w-full rounded-xl border-slate-300 p-2.5 font-bold" required placeholder="Contoh: TSP (P2O5 46%)">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold mb-1">Kategori</label>
+            <select id="new-fert-category" class="w-full rounded-xl border-slate-300 p-2.5">
+              <option value="Majemuk">Majemuk</option>
+              <option value="Tunggal">Tunggal</option>
+              <option value="Mikro">Mikro</option>
+              <option value="Pembenah">Pembenah Tanah</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Dosis Rekomendasi (Kg/Pkk)</label>
+            <input type="number" id="new-fert-dose" step="0.05" value="2.00" class="w-full rounded-xl border-slate-300 p-2.5 font-bold" required>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Metode Aplikasi Standar</label>
+          <select id="new-fert-method" class="w-full rounded-xl border-slate-300 p-2.5">
+            <option value="Tabur Piringan">Tabur Piringan</option>
+            <option value="Saku / Poket">Saku / Poket</option>
+            <option value="Mekanis Tractor Spreader">Mekanis Tractor Spreader</option>
+            <option value="Lubang Tanam">Lubang Tanam</option>
+          </select>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="masterDataModule.closeAddFertilizerModal()" class="py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Batal</button>
+          <button type="submit" class="py-2 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Simpan Pupuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- PRINT REPORT SECTION (HIDDEN ON SCREEN, SHOWN ON PRINT) -->
+  <div id="print-section" class="hidden"></div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-4 px-4 text-center space-y-1">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-emerald-400">PalmFert System</span>
+        <span>•</span>
+        <span>Divisi Agronomi Perkebunan Kelapa Sawit</span>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono">
+        Official Corporate Portal • Multi-Role Access Control
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT IMPORTS -->
+  <script src="js/data.js"></script>
+  <script src="js/mandor.js"></script>
+  <script src="js/gudang.js"></script>
+  <script src="js/approval.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/master.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

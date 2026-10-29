@@ -1,0 +1,21 @@
+{
+  "name": "PalmFert - Aplikasi Pemupukan Kelapa Sawit",
+  "short_name": "PalmFert",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#14532d",
+  "theme_color": "#15803d",
+  "description": "Digitalisasi pencatatan, pemantauan real-time penggunaan pupuk, dosis per blok, GPS watermark, dan approval perkebunan kelapa sawit.",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/palm-tree.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/palm-tree.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
